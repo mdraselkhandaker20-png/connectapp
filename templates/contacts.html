@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ConnectApp — Contacts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+    <span class="logo">ConnectApp</span>
+    <div class="nav-links">
+        <a href="/dashboard">Home</a>
+        <a href="/sport">Sport</a>
+        <div class="nav-avatar">{{ username[0]|upper }}</div>
+    </div>
+</nav>
+<div class="dashboard-wrapper">
+    <div class="sidebar">
+        <div class="user-info">
+            <div class="user-avatar">{{ username[0]|upper }}</div>
+            <div class="user-name">{{ username }}</div>
+            <div class="user-status">&#11044; Online</div>
+        </div>
+        <a href="/dashboard" class="menu-item">
+            <span class="menu-icon">&#9632;</span> Home
+        </a>
+        <a href="/contacts" class="menu-item active">
+            <span class="menu-icon">&#9742;</span> Contacts
+        </a>
+        <a href="/calllog" class="menu-item">
+            <span class="menu-icon">&#9743;</span> Call Log
+        </a>
+        <a href="/messages" class="menu-item">
+            <span class="menu-icon">&#9993;</span> Messages
+        </a>
+        <a href="/settings" class="menu-item">
+            <span class="menu-icon">&#9881;</span> Settings
+        </a>
+        <a href="/logout" class="logout-btn">&#10148; Logout</a>
+    </div>
+    <div class="main-content">
+        <div class="page-title">Contacts</div>
+
+        <div class="section-card" style="margin-bottom:20px;">
+            <div class="section-header">
+                <span class="section-title">Add New Contact</span>
+            </div>
+            <form method="POST" action="/add_contact" style="display:flex;gap:12px;flex-wrap:wrap;">
+                <input type="text" name="name" placeholder="Full Name" required
+                       style="flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;">
+                <input type="text" name="phone" placeholder="Phone Number"
+                       style="flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;">
+                <input type="text" name="email" placeholder="Email (optional)"
+                       style="flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;">
+                <button type="submit"
+                        style="padding:9px 20px;background:#1d4ed8;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;">
+                    + Add
+                </button>
+            </form>
+        </div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <span class="section-title">My Contacts ({{ contacts|length }})</span>
+            </div>
+            {% if contacts %}
+                {% for contact in contacts %}
+                <div class="contact-row" onclick="toggleDetail('detail-{{ contact[0] }}')" style="cursor:pointer;">
+                    <div class="contact-avatar" style="background:#dbeafe;color:#1d4ed8;">
+                        {{ contact[2][0]|upper }}
+                    </div>
+                    <div class="contact-info">
+                        <div class="contact-name">{{ contact[2] }}</div>
+                        <div class="contact-sub">
+                            {% if contact[3] %}{{ contact[3] }}{% endif %}
+                            {% if contact[4] %} &bull; {{ contact[4] }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="online-dot"></div>
+                    <a href="/call/{{ contact[2] }}" onclick="event.stopPropagation()"
+                        class="btn-call" style="text-decoration:none;">&#9990; Call</a>
+                        <a href="/call/{{ contact[2] }}?video=true" onclick="event.stopPropagation()"
+                        class="btn-video" style="text-decoration:none;">&#9641; Video</a>
+                    
+                </div>
+                <div id="detail-{{ contact[0] }}" style="display:none;background:#f8fafc;border:0.5px solid #e2e8f0;border-radius:8px;padding:16px;margin:4px 0 8px 50px;">
+                    <p style="font-size:14px;font-weight:600;color:#1e293b;margin-bottom:8px;">{{ contact[2] }}</p>
+                    {% if contact[3] %}
+                    <p style="font-size:13px;color:#64748b;margin-bottom:4px;">&#9990; {{ contact[3] }}</p>
+                    {% endif %}
+                    {% if contact[4] %}
+                    <p style="font-size:13px;color:#64748b;margin-bottom:12px;">&#9993; {{ contact[4] }}</p>
+                    {% endif %}
+                    <a href="/delete_contact/{{ contact[0] }}"
+                       onclick="return confirm('Delete this contact?')"
+                       style="padding:6px 14px;background:#fef2f2;color:#dc2626;border-radius:6px;font-size:12px;text-decoration:none;">
+                       &#10005; Delete Contact
+                    </a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color:#94a3b8;font-size:14px;padding:16px 0;">No contacts yet!</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+function toggleDetail(id) {
+    var el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+</body>
+</html>

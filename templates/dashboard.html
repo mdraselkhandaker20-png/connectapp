@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ConnectApp — Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<nav class="navbar">
+    <span class="logo">ConnectApp</span>
+    <div class="nav-links">
+        <a href="/dashboard">Home</a>
+        <a href="/sport">Sport</a>
+        <div class="nav-avatar">{{ username[0]|upper }}</div>
+    </div>
+</nav>
+
+<div class="dashboard-wrapper">
+
+    <div class="sidebar">
+        <div class="user-info">
+            <div class="user-avatar">{{ username[0]|upper }}</div>
+            <div class="user-name">{{ username }}</div>
+            <div class="user-status">&#11044; Online</div>
+        </div>
+        <a href="/dashboard" class="menu-item active">
+            <span class="menu-icon">&#9632;</span> Home
+        </a>
+        <a href="/contacts" class="menu-item">
+            <span class="menu-icon">&#9742;</span> Contacts
+        </a>
+        <a href="/calllog" class="menu-item">
+            <span class="menu-icon">&#9743;</span> Call Log
+        </a>
+        <a href="/messages" class="menu-item">
+            <span class="menu-icon">&#9993;</span> Messages
+        </a>
+        <a href="/settings" class="menu-item">
+            <span class="menu-icon">&#9881;</span> Settings
+        </a>
+        <a href="/logout" class="logout-btn">&#10148; Logout</a>
+    </div>
+
+    <div class="main-content">
+        <div class="page-title">Welcome, {{ username }}!</div>
+
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-num">{{ total_users }}</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ contacts|length }}</div>
+                <div class="stat-label">My Contacts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">0</div>
+                <div class="stat-label">Recent Calls</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">0</div>
+                <div class="stat-label">Missed Calls</div>
+            </div>
+        </div>
+
+        <div class="section-card" style="margin-bottom:20px;">
+            <div class="section-header">
+                <span class="section-title">Add New Contact</span>
+            </div>
+            <form method="POST" action="/add_contact" style="display:flex;gap:12px;flex-wrap:wrap;">
+                <input type="text" name="name" placeholder="Full Name" required
+                       style="flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;">
+                <input type="text" name="phone" placeholder="Phone Number"
+                       style="flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;">
+                <input type="text" name="email" placeholder="Email (optional)"
+                       style="flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;">
+                <button type="submit"
+                        style="padding:9px 20px;background:#1d4ed8;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;">
+                    + Add
+                </button>
+            </form>
+        </div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <span class="section-title">My Contacts ({{ contacts|length }})</span>
+            </div>
+
+            {% if contacts %}
+                {% for contact in contacts %}
+                <div class="contact-row" onclick="toggleDetail('detail-{{ contact[0] }}')" style="cursor:pointer;">
+                    <div class="contact-avatar" style="background:#dbeafe;color:#1d4ed8;">
+                        {{ contact[2][0]|upper }}
+                    </div>
+                    <div class="contact-info">
+                        <div class="contact-name">{{ contact[2] }}</div>
+                        <div class="contact-sub">
+                            {% if contact[3] %}{{ contact[3] }}{% endif %}
+                            {% if contact[4] %} &bull; {{ contact[4] }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="online-dot"></div>
+                    <a href="/chat/{{ contact[2] }}" onclick="event.stopPropagation()"
+                    style="padding:6px 14px;background:#f0fdf4;color:#16a34a;border-radius:6px;font-size:12px;text-decoration:none;margin-right:4px;">
+                    &#9993; Message</a>
+                    <a href="/call/{{ contact[2] }}" onclick="event.stopPropagation()"
+                    class="btn-call" style="text-decoration:none;">&#9990; Call</a>
+                    <a href="/call/{{ contact[2] }}?video=true" onclick="event.stopPropagation()"
+                    class="btn-video" style="text-decoration:none;">&#9641; Video</a>
+                    
+                </div>
+                <div id="detail-{{ contact[0] }}" style="display:none;background:#f8fafc;border:0.5px solid #e2e8f0;border-radius:8px;padding:16px;margin:4px 0 8px 50px;">
+                    <p style="font-size:14px;font-weight:600;color:#1e293b;margin-bottom:8px;">{{ contact[2] }}</p>
+                    {% if contact[3] %}
+                    <p style="font-size:13px;color:#64748b;margin-bottom:4px;">&#9990; {{ contact[3] }}</p>
+                    {% endif %}
+                    {% if contact[4] %}
+                    <p style="font-size:13px;color:#64748b;margin-bottom:12px;">&#9993; {{ contact[4] }}</p>
+                    {% endif %}
+                    <a href="/delete_contact/{{ contact[0] }}"
+                       onclick="return confirm('Delete this contact?')"
+                       style="padding:6px 14px;background:#fef2f2;color:#dc2626;border-radius:6px;font-size:12px;text-decoration:none;">
+                       &#10005; Delete Contact
+                    </a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color:#94a3b8;font-size:14px;padding:16px 0;">
+                    No contacts yet. Add your first contact above!
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleDetail(id) {
+    var el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+
+<div id="incomingCallPopup" style="display:none;position:fixed;top:80px;right:24px;background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px 24px;text-align:center;z-index:999;min-width:220px;">
+    <div style="font-size:16px;font-weight:600;color:white;margin-bottom:4px;" id="popupCallerName">Someone</div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">Incoming call...</div>
+    <div style="display:flex;gap:12px;justify-content:center;">
+        <button onclick="acceptIncomingCall()" style="width:50px;height:50px;border-radius:50%;background:#16a34a;border:none;font-size:20px;color:white;cursor:pointer;">&#9990;</button>
+        <button onclick="declineIncomingCall()" style="width:50px;height:50px;border-radius:50%;background:#dc2626;border:none;font-size:20px;color:white;cursor:pointer;">&#10005;</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<script>
+    var username = "{{ username }}";
+    var socket = io();
+    var incomingCaller = null;
+
+    socket.emit('join_call', { room: username, caller: username, receiver: username });
+
+    socket.on('incoming_call_notify', function(data) {
+        if (data.receiver === username) {
+            incomingCaller = data.caller;
+            document.getElementById('popupCallerName').textContent = data.caller;
+            document.getElementById('incomingCallPopup').style.display = 'block';
+        }
+    });
+
+    function acceptIncomingCall() {
+        document.getElementById('incomingCallPopup').style.display = 'none';
+        window.location.href = '/call/' + incomingCaller;
+    }
+
+    function declineIncomingCall() {
+        document.getElementById('incomingCallPopup').style.display = 'none';
+        socket.emit('call_declined', { caller: incomingCaller });
+    }
+</script>
+
+
+</body>
+</html>

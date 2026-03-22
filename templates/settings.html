@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ConnectApp — Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+    <span class="logo">ConnectApp</span>
+    <div class="nav-links">
+        <a href="/dashboard">Home</a>
+        <div class="nav-avatar">{{ username[0]|upper }}</div>
+    </div>
+</nav>
+<div class="dashboard-wrapper">
+    <div class="sidebar">
+        <div class="user-info">
+            <div class="user-avatar">{{ username[0]|upper }}</div>
+            <div class="user-name">{{ username }}</div>
+            <div class="user-status">&#11044; Online</div>
+        </div>
+        <a href="/dashboard" class="menu-item">
+            <span class="menu-icon">&#9632;</span> Home
+        </a>
+        <a href="/contacts" class="menu-item">
+            <span class="menu-icon">&#9742;</span> Contacts
+        </a>
+        <a href="/calllog" class="menu-item">
+            <span class="menu-icon">&#9743;</span> Call Log
+        </a>
+        <a href="/messages" class="menu-item">
+            <span class="menu-icon">&#9993;</span> Messages
+        </a>
+        <a href="/settings" class="menu-item active">
+            <span class="menu-icon">&#9881;</span> Settings
+        </a>
+        <a href="/logout" class="logout-btn">&#10148; Logout</a>
+    </div>
+    <div class="main-content">
+        <div class="page-title">Settings</div>
+        <div class="section-card">
+            <div class="section-header">
+                <span class="section-title">Account Info</span>
+            </div>
+            <div style="padding:12px 0;">
+                <p style="font-size:14px;color:#64748b;margin-bottom:8px;">Username</p>
+                <p style="font-size:16px;font-weight:500;color:#1e293b;">{{ username }}</p>
+            </div>
+            <div style="border-top:0.5px solid #f1f5f9;padding-top:16px;margin-top:8px;">
+                <a href="/logout"
+                   style="padding:9px 20px;background:#fef2f2;color:#dc2626;border-radius:8px;font-size:14px;text-decoration:none;font-weight:500;">
+                   Logout
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

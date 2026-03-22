@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Call — {{ receiver }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .call-wrapper{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 56px);background:#0f172a;gap:16px;}
+        .call-avatar{width:90px;height:90px;border-radius:50%;background:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:bold;color:white;border:4px solid #3b82f6;}
+        .call-name{font-size:22px;font-weight:600;color:white;}
+        .call-status{font-size:14px;color:#94a3b8;}
+        .video-container{position:relative;width:480px;height:320px;}
+        #remoteVideo{width:480px;height:320px;background:#1e293b;border-radius:12px;border:2px solid #334155;object-fit:cover;}
+        #localVideo{width:140px;height:105px;background:#1e293b;border-radius:8px;border:2px solid #334155;position:absolute;bottom:10px;right:10px;object-fit:cover;}
+        .call-buttons{display:flex;gap:16px;margin-top:8px;}
+        .cbtn{width:56px;height:56px;border-radius:50%;border:none;font-size:20px;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+        .cbtn-end{background:#dc2626;}
+        .cbtn-mute{background:#334155;}
+        .cbtn-video{background:#334155;}
+        .cbtn-accept{background:#16a34a;}
+        .cbtn-red{background:#dc2626;}
+        .incoming-popup{display:none;position:fixed;top:80px;right:24px;background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px 24px;text-align:center;z-index:999;min-width:220px;}
+        .incoming-popup.show{display:block;}
+        .incoming-name{font-size:16px;font-weight:600;color:white;margin-bottom:4px;}
+        .incoming-sub{font-size:12px;color:#94a3b8;margin-bottom:16px;}
+        .incoming-btns{display:flex;gap:12px;justify-content:center;}
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <span class="logo">ConnectApp</span>
+    <div class="nav-links">
+        <a href="/dashboard" style="color:#93c5fd;">Home</a>
+        <div class="nav-avatar">{{ username[0]|upper }}</div>
+    </div>
+</nav>
+
+<div class="incoming-popup" id="incomingPopup">
+    <div class="incoming-name" id="callerName">Someone</div>
+    <div class="incoming-sub">Incoming call...</div>
+    <div class="incoming-btns">
+        <button class="cbtn cbtn-accept" onclick="acceptCall()">&#9990;</button>
+        <button class="cbtn cbtn-red" onclick="declineCall()">&#10005;</button>
+    </div>
+</div>
+
+<div class="call-wrapper">
+    <div class="call-avatar">{{ receiver[0]|upper }}</div>
+    <div class="call-name">{{ receiver }}</div>
+    <div class="call-status" id="callStatus">Connecting...</div>
+    <div class="video-container" id="videoContainer" style="display:none;">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+    </div>
+    <div class="call-buttons">
+        <button class="cbtn cbtn-mute" id="muteBtn" onclick="toggleMute()">&#128263;</button>
+        <button class="cbtn cbtn-end" onclick="endCall()">&#128222;</button>
+        <button class="cbtn cbtn-video" id="videoBtn" onclick="toggleVideo()">&#127909;</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<script>
+    var username = "{{ username }}";
+    var receiver = "{{ receiver }}";
+    var room = [username, receiver].sort().join('');
+    var localStream = null;
+    var peerConnection = null;
+    var isMuted = false;
+    var isVideoOff = false;
+    var pendingOffer = null;
+    var callEnded = false;
+
+    var config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    var socket = io();
+
+    socket.emit('join_call', { room: room, caller: username, receiver: receiver });
+
+    async function startMedia(withVideo) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: withVideo, audio: true });
+            if (withVideo) {
+                document.getElementById('videoContainer').style.display = 'block';
+                document.getElementById('localVideo').srcObject = localStream;
+            }
+            return true;
+        } catch(e) {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                document.getElementById('callStatus').textContent = 'Audio only';
+                return true;
+            } catch(e2) {
+                document.getElementById('callStatus').textContent = 'No mic/camera found!';
+                return false;
+            }
+        }
+    }
+
+    async function initCall() {
+        document.getElementById('callStatus').textContent = 'Calling ' + receiver + '...';
+        var ok = await startMedia(true);
+        if (!ok) return;
+
+        peerConnection = new RTCPeerConnection(config);
+        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+
+        peerConnection.ontrack = function(e) {
+            document.getElementById('remoteVideo').srcObject = e.streams[0];
+            document.getElementById('videoContainer').style.display = 'block';
+            document.getElementById('callStatus').textContent = 'Connected';
+        };
+
+        peerConnection.onicecandidate = function(e) {
+            if (e.candidate) socket.emit('ice_candidate', { room: room, candidate: e.candidate });
+        };
+
+        var offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('call_offer', { room: room, offer: offer, caller: username });
+    }
+
+    async function acceptCall() {
+        document.getElementById('incomingPopup').classList.remove('show');
+        var ok = await startMedia(true);
+        if (!ok) return;
+
+        peerConnection = new RTCPeerConnection(config);
+        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+
+        peerConnection.ontrack = function(e) {
+            document.getElementById('remoteVideo').srcObject = e.streams[0];
+            document.getElementById('videoContainer').style.display = 'block';
+            document.getElementById('callStatus').textContent = 'Connected';
+        };
+
+        peerConnection.onicecandidate = function(e) {
+            if (e.candidate) socket.emit('ice_candidate', { room: room, candidate: e.candidate });
+        };
+
+        await peerConnection.setRemoteDescription(pendingOffer);
+        var answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('call_answer', { room: room, answer: answer });
+    }
+
+    function declineCall() {
+        document.getElementById('incomingPopup').classList.remove('show');
+        socket.emit('call_end', { room: room });
+        window.location.href = '/dashboard';
+    }
+
+    function endCall() {
+        if (callEnded) return;
+        callEnded = true;
+        socket.emit('call_end', { room: room });
+        if (peerConnection) peerConnection.close();
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        window.location.href = '/dashboard';
+    }
+
+    socket.on('call_offer', async function(data) {
+        if (data.caller === username) return;
+        pendingOffer = data.offer;
+        document.getElementById('callerName').textContent = data.caller;
+        document.getElementById('incomingPopup').classList.add('show');
+        document.getElementById('callStatus').textContent = 'Incoming call from ' + data.caller;
+    });
+
+    socket.on('call_answer', async function(data) {
+        if (peerConnection) {
+            await peerConnection.setRemoteDescription(data.answer);
+            document.getElementById('callStatus').textContent = 'Connected';
+        }
+    });
+
+    socket.on('ice_candidate', async function(data) {
+        try {
+            if (peerConnection) await peerConnection.addIceCandidate(data.candidate);
+        } catch(e) {}
+    });
+
+    socket.on('call_end', function() {
+        if (callEnded) return;
+        callEnded = true;
+        if (peerConnection) peerConnection.close();
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        alert('Call ended!');
+        window.location.href = '/dashboard';
+    });
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+        document.getElementById('muteBtn').style.background = isMuted ? '#dc2626' : '#334155';
+        document.getElementById('muteBtn').innerHTML = isMuted ? '&#128264;' : '&#128263;';
+    }
+
+    function toggleVideo() {
+        isVideoOff = !isVideoOff;
+        if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = !isVideoOff);
+        document.getElementById('videoBtn').style.background = isVideoOff ? '#dc2626' : '#334155';
+    }
+
+    initCall();
+</script>
+</body>
+</html>

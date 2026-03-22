@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat — {{ receiver }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .chat-wrapper{display:flex;flex-direction:column;height:calc(100vh - 56px);}
+        .chat-header{background:white;border-bottom:0.5px solid #e2e8f0;padding:14px 24px;display:flex;align-items:center;gap:12px;}
+        .chat-header .back{color:#2563eb;text-decoration:none;font-size:14px;}
+        .receiver-avatar{width:36px;height:36px;border-radius:50%;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;}
+        .receiver-name{font-size:15px;font-weight:600;color:#1e293b;}
+        .chat-body{flex:1;overflow-y:auto;padding:20px 24px;background:#f0f4ff;display:flex;flex-direction:column;gap:10px;}
+        .msg-bubble{max-width:60%;padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.5;}
+        .msg-sent{background:#1d4ed8;color:white;align-self:flex-end;border-bottom-right-radius:4px;}
+        .msg-received{background:white;color:#1e293b;align-self:flex-start;border:0.5px solid #e2e8f0;border-bottom-left-radius:4px;}
+        .msg-time{font-size:10px;margin-top:4px;opacity:0.7;}
+        .msg-name{font-size:11px;margin-bottom:3px;color:#64748b;margin-left:4px;}
+        .chat-footer{background:white;border-top:0.5px solid #e2e8f0;padding:14px 24px;}
+        .chat-footer form{display:flex;gap:10px;}
+        .chat-footer input{flex:1;padding:10px 16px;border:1px solid #e2e8f0;border-radius:24px;font-size:14px;outline:none;}
+        .chat-footer input:focus{border-color:#3b82f6;}
+        .chat-footer button{padding:10px 22px;background:#1d4ed8;color:white;border:none;border-radius:24px;font-size:14px;cursor:pointer;}
+        .chat-footer button:hover{background:#1e40af;}
+        .empty-chat{text-align:center;color:#94a3b8;font-size:14px;margin:auto;}
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <span class="logo">ConnectApp</span>
+    <div class="nav-links">
+        <a href="/dashboard">Home</a>
+        <div class="nav-avatar">{{ username[0]|upper }}</div>
+    </div>
+</nav>
+
+<div class="chat-wrapper">
+    <div class="chat-header">
+        <a href="/messages" class="back">&#8592; Back</a>
+        <div class="receiver-avatar">{{ receiver[0]|upper }}</div>
+        <span class="receiver-name">{{ receiver }}</span>
+    </div>
+
+    <div class="chat-body" id="chatBody">
+        {% if chats %}
+            {% for chat in chats %}
+                {% if chat[1] == username %}
+                <div style="align-self:flex-end;display:flex;flex-direction:column;align-items:flex-end;">
+                    <div class="msg-bubble msg-sent">
+                        {{ chat[3] }}
+                        <div class="msg-time">{{ chat[4] }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <div style="align-self:flex-start;display:flex;flex-direction:column;align-items:flex-start;">
+                    <div class="msg-name">{{ chat[1] }}</div>
+                    <div class="msg-bubble msg-received">
+                        {{ chat[3] }}
+                        <div class="msg-time">{{ chat[4] }}</div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="empty-chat" id="emptyMsg">No messages yet. Say hello! &#128075;</div>
+        {% endif %}
+    </div>
+
+    <div class="chat-footer">
+        <form id="msgForm">
+            <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off" required>
+            <button type="submit">Send &#10148;</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    var username = "{{ username }}";
+    var receiver = "{{ receiver }}";
+    var chatBody = document.getElementById('chatBody');
+    chatBody.scrollTop = chatBody.scrollHeight;
+
+    document.getElementById('msgForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var msg = document.getElementById('msgInput').value.trim();
+        if (!msg) return;
+
+        fetch('/send_message_ajax', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                receiver: receiver,
+                message: msg
+            })
+        }).then(() => {
+            document.getElementById('msgInput').value = '';
+        });
+    });
+
+    setInterval(function() {
+        fetch(window.location.href)
+            .then(res => res.text())
+            .then(html => {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var newBody = doc.getElementById('chatBody');
+                var currentBody = document.getElementById('chatBody');
+                if (newBody.innerHTML !== currentBody.innerHTML) {
+                    currentBody.innerHTML = newBody.innerHTML;
+                    currentBody.scrollTop = currentBody.scrollHeight;
+                }
+            });
+    }, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ConnectApp — Call Log</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+    <span class="logo">ConnectApp</span>
+    <div class="nav-links">
+        <a href="/dashboard">Home</a>
+        <div class="nav-avatar">{{ username[0]|upper }}</div>
+    </div>
+</nav>
+<div class="dashboard-wrapper">
+    <div class="sidebar">
+        <div class="user-info">
+            <div class="user-avatar">{{ username[0]|upper }}</div>
+            <div class="user-name">{{ username }}</div>
+            <div class="user-status">&#11044; Online</div>
+        </div>
+        <a href="/dashboard" class="menu-item">
+            <span class="menu-icon">&#9632;</span> Home
+        </a>
+        <a href="/contacts" class="menu-item">
+            <span class="menu-icon">&#9742;</span> Contacts
+        </a>
+        <a href="/calllog" class="menu-item active">
+            <span class="menu-icon">&#9743;</span> Call Log
+        </a>
+        <a href="/messages" class="menu-item">
+            <span class="menu-icon">&#9993;</span> Messages
+        </a>
+        <a href="/settings" class="menu-item">
+            <span class="menu-icon">&#9881;</span> Settings
+        </a>
+        <a href="/logout" class="logout-btn">&#10148; Logout</a>
+    </div>
+    <div class="main-content">
+        <div class="page-title">Call Log</div>
+        <div class="section-card">
+            <div class="section-header">
+                <span class="section-title">Recent Calls</span>
+            </div>
+            <p style="color:#94a3b8;font-size:14px;padding:24px 0;text-align:center;">
+                Call history will appear here once calling feature is added.
+            </p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
