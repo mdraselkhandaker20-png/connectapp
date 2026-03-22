@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chat — {{ receiver }}</title>
+    <title>Chat — {{ receiver_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         .chat-wrapper{display:flex;flex-direction:column;height:calc(100vh - 56px);}
@@ -37,14 +37,14 @@
 <div class="chat-wrapper">
     <div class="chat-header">
         <a href="/messages" class="back">&#8592; Back</a>
-        <div class="receiver-avatar">{{ receiver[0]|upper }}</div>
-        <span class="receiver-name">{{ receiver }}</span>
+        <div class="receiver-avatar">{{ receiver_name[0]|upper }}</div>
+        <span class="receiver-name">{{ receiver_name }}</span>
     </div>
 
     <div class="chat-body" id="chatBody">
         {% if chats %}
             {% for chat in chats %}
-                {% if chat[1] == username %}
+                {% if chat[1] == email %}
                 <div style="align-self:flex-end;display:flex;flex-direction:column;align-items:flex-end;">
                     <div class="msg-bubble msg-sent">
                         {{ chat[3] }}
@@ -53,7 +53,7 @@
                 </div>
                 {% else %}
                 <div style="align-self:flex-start;display:flex;flex-direction:column;align-items:flex-start;">
-                    <div class="msg-name">{{ chat[1] }}</div>
+                    <div class="msg-name">{{ receiver_name }}</div>
                     <div class="msg-bubble msg-received">
                         {{ chat[3] }}
                         <div class="msg-time">{{ chat[4] }}</div>
@@ -75,7 +75,7 @@
 </div>
 
 <script>
-    var username = "{{ username }}";
+    var email = "{{ email }}";
     var receiver = "{{ receiver }}";
     var chatBody = document.getElementById('chatBody');
     chatBody.scrollTop = chatBody.scrollHeight;

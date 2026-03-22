@@ -62,8 +62,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
 <script>
     var username = "{{ username }}";
+    var email = "{{ email }}";
     var receiver = "{{ receiver }}";
-    var room = [username, receiver].sort().join('');
+    var receiver_name = "{{ receiver_name }}";
+    var room = [email, receiver].sort().join('');   
     var localStream = null;
     var peerConnection = null;
     var isMuted = false;
@@ -74,7 +76,8 @@
     var config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
     var socket = io();
 
-    socket.emit('join_call', { room: room, caller: username, receiver: receiver });
+    socket.emit('join_call', { room: room, caller: email, receiver: receiver });
+    socket.emit('join_personal', { username: email });
 
     async function startMedia(withVideo) {
         try {
