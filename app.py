@@ -4,23 +4,25 @@ import sqlite3
 import hashlib
 
 app = Flask(__name__)
-socketio = SocketIO(app)
 app.secret_key = 'rasel_secret_key_2026'
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS contacts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        owner TEXT NOT NULL,
-        name TEXT NOT NULL,
-        phone TEXT,
-        email TEXT
+        owner_email TEXT NOT NULL,
+        contact_email TEXT NOT NULL,
+        contact_name TEXT NOT NULL,
+        contact_phone TEXT
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,18 +43,19 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form['username']
+    email = request.form['email']
     password = hash_password(request.form['password'])
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE username=? AND password=?', (username, password))
+    c.execute('SELECT * FROM users WHERE email=? AND password=?', (email, password))
     user = c.fetchone()
     conn.close()
     if user:
-        session['username'] = username
+        session['email'] = user[1]
+        session['name'] = user[3]
         return redirect(url_for('dashboard'))
     else:
-        return render_template('index.html', error="Invalid username or password!")
+        return render_template('index.html', error="Invalid email or password!")
 
 @app.route('/signup')
 def signup():
@@ -60,95 +63,115 @@ def signup():
 
 @app.route('/signup', methods=['POST'])
 def signup_post():
-    username = request.form['username']
+    email = request.form['email']
     password = hash_password(request.form['password'])
+    name = request.form['name']
+    phone = request.form.get('phone', '')
     try:
         conn = sqlite3.connect('users.db')
         c = conn.cursor()
-        c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+        c.execute('INSERT INTO users (email, password, name, phone) VALUES (?, ?, ?, ?)',
+                  (email, password, name, phone))
         conn.commit()
         conn.close()
         return redirect(url_for('home'))
     except sqlite3.IntegrityError:
-        return render_template('signup.html', error="Username already exists!")
+        return render_template('signup.html', error="Email already exists!")
 
 @app.route('/dashboard')
 def dashboard():
-    if 'username' not in session:
+    if 'email' not in session:
         return redirect(url_for('home'))
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     c.execute('SELECT COUNT(*) FROM users')
     total_users = c.fetchone()[0]
-    c.execute('SELECT * FROM contacts WHERE owner=?', (session['username'],))
+    c.execute('SELECT * FROM contacts WHERE owner_email=?', (session['email'],))
     contacts = c.fetchall()
     conn.close()
     return render_template('dashboard.html',
-                           username=session['username'],
+                           username=session['name'],
+                           email=session['email'],
                            total_users=total_users,
                            contacts=contacts)
 
 @app.route('/add_contact', methods=['POST'])
 def add_contact():
-    if 'username' not in session:
+    if 'email' not in session:
         return redirect(url_for('home'))
-    name = request.form['name']
-    phone = request.form['phone']
-    email = request.form['email']
+    contact_email = request.form['contact_email']
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('INSERT INTO contacts (owner, name, phone, email) VALUES (?, ?, ?, ?)',
-              (session['username'], name, phone, email))
+    c.execute('SELECT name, phone FROM users WHERE email=?', (contact_email,))
+    user = c.fetchone()
+    if not user:
+        conn.close()
+        return render_template('dashboard.html',
+                               username=session['name'],
+                               email=session['email'],
+                               total_users=0,
+                               contacts=[],
+                               error="No user found with this email!")
+    c.execute('SELECT * FROM contacts WHERE owner_email=? AND contact_email=?',
+              (session['email'], contact_email))
+    exists = c.fetchone()
+    if exists:
+        conn.close()
+        return redirect(url_for('dashboard'))
+    c.execute('INSERT INTO contacts (owner_email, contact_email, contact_name, contact_phone) VALUES (?, ?, ?, ?)',
+              (session['email'], contact_email, user[0], user[1]))
     conn.commit()
     conn.close()
     return redirect(url_for('dashboard'))
 
 @app.route('/delete_contact/<int:contact_id>')
 def delete_contact(contact_id):
-    if 'username' not in session:
+    if 'email' not in session:
         return redirect(url_for('home'))
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('DELETE FROM contacts WHERE id=? AND owner=?', (contact_id, session['username']))
+    c.execute('DELETE FROM contacts WHERE id=? AND owner_email=?', (contact_id, session['email']))
     conn.commit()
     conn.close()
     return redirect(url_for('dashboard'))
 
 @app.route('/contacts')
 def contacts():
-    if 'username' not in session:
+    if 'email' not in session:
         return redirect(url_for('home'))
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('SELECT * FROM contacts WHERE owner=?', (session['username'],))
+    c.execute('SELECT * FROM contacts WHERE owner_email=?', (session['email'],))
     contacts = c.fetchall()
     conn.close()
     return render_template('contacts.html',
-                           username=session['username'],
+                           username=session['name'],
+                           email=session['email'],
                            contacts=contacts)
 
 @app.route('/calllog')
 def calllog():
-    if 'username' not in session:
+    if 'email' not in session:
         return redirect(url_for('home'))
-    return render_template('calllog.html', username=session['username'])
+    return render_template('calllog.html', username=session['name'])
 
 @app.route('/messages')
 def messages():
-    if 'username' not in session:
+    if 'email' not in session:
         return redirect(url_for('home'))
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('SELECT * FROM contacts WHERE owner=?', (session['username'],))
+    c.execute('SELECT * FROM contacts WHERE owner_email=?', (session['email'],))
     contacts = c.fetchall()
     conn.close()
     return render_template('messages.html',
-                           username=session['username'],
+                           username=session['name'],
+                           email=session['email'],
                            contacts=contacts)
 
-@app.route('/chat/<receiver>')
-def chat(receiver):
-    if 'username' not in session:
+@app.route('/chat/<receiver_email>')
+def chat(receiver_email):
+    if 'email' not in session:
         return redirect(url_for('home'))
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -156,17 +179,22 @@ def chat(receiver):
                  WHERE (sender=? AND receiver=?)
                  OR (sender=? AND receiver=?)
                  ORDER BY timestamp ASC''',
-              (session['username'], receiver, receiver, session['username']))
+              (session['email'], receiver_email, receiver_email, session['email']))
     chats = c.fetchall()
+    c.execute('SELECT name FROM users WHERE email=?', (receiver_email,))
+    receiver = c.fetchone()
+    receiver_name = receiver[0] if receiver else receiver_email
     conn.close()
     return render_template('chat.html',
-                           username=session['username'],
-                           receiver=receiver,
+                           username=session['name'],
+                           email=session['email'],
+                           receiver=receiver_email,
+                           receiver_name=receiver_name,
                            chats=chats)
 
 @app.route('/send_message_ajax', methods=['POST'])
 def send_message_ajax():
-    if 'username' not in session:
+    if 'email' not in session:
         return jsonify({'error': 'not logged in'}), 401
     data = request.get_json()
     receiver = data['receiver']
@@ -174,32 +202,42 @@ def send_message_ajax():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     c.execute('INSERT INTO messages (sender, receiver, message) VALUES (?, ?, ?)',
-              (session['username'], receiver, message))
+              (session['email'], receiver, message))
     conn.commit()
     conn.close()
     return jsonify({'status': 'ok'})
 
+@app.route('/call/<receiver_email>')
+def call(receiver_email):
+    if 'email' not in session:
+        return redirect(url_for('home'))
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('SELECT name FROM users WHERE email=?', (receiver_email,))
+    receiver = c.fetchone()
+    receiver_name = receiver[0] if receiver else receiver_email
+    conn.close()
+    return render_template('call.html',
+                           username=session['name'],
+                           email=session['email'],
+                           receiver=receiver_email,
+                           receiver_name=receiver_name)
+
 @app.route('/settings')
 def settings():
-    if 'username' not in session:
+    if 'email' not in session:
         return redirect(url_for('home'))
-    return render_template('settings.html', username=session['username'])
+    return render_template('settings.html',
+                           username=session['name'],
+                           email=session['email'])
 
 @app.route('/sport')
 def sport():
     return render_template('sport.html')
 
-@app.route('/call/<receiver>')
-def call(receiver):
-    if 'username' not in session:
-        return redirect(url_for('home'))
-    return render_template('call.html',
-                           username=session['username'],
-                           receiver=receiver)
-
 @app.route('/logout')
 def logout():
-    session.pop('username', None)
+    session.clear()
     return redirect(url_for('home'))
 
 @socketio.on('join_call')
@@ -210,6 +248,10 @@ def on_join_call(data):
             'caller': data['caller'],
             'receiver': data['receiver']
         }, room=data['receiver'])
+
+@socketio.on('join_personal')
+def on_join_personal(data):
+    join_room(data['username'])
 
 @socketio.on('call_offer')
 def on_call_offer(data):
@@ -234,4 +276,3 @@ def on_call_declined(data):
 if __name__ == '__main__':
     init_db()
     socketio.run(app, debug=True)
-    

@@ -246,7 +246,7 @@ body {
 
 /* Main content */
 .main-content {
-    padding: 28px;
+    padding: 24px;
 }
 
 .page-title {
@@ -261,12 +261,12 @@ body {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
-    margin-bottom: 28px;
+    margin-bottom: 10px;
 }
 
 .stat-card {
     background: white;
-    border-radius: 10px;
+    border-radius: 30px;
     padding: 20px;
     border: 0.5px solid #e2e8f0;
     text-align: center;
