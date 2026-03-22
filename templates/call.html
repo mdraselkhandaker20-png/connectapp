@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Call — {{ receiver }}</title>
+    <title>Call — {{ receiver_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         .call-wrapper{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 56px);background:#0f172a;gap:16px;}
@@ -45,8 +45,8 @@
 </div>
 
 <div class="call-wrapper">
-    <div class="call-avatar">{{ receiver[0]|upper }}</div>
-    <div class="call-name">{{ receiver }}</div>
+    <div class="call-avatar">{{ receiver_name[0]|upper }}</div>
+    <div class="call-name">{{ receiver_name }}</div>
     <div class="call-status" id="callStatus">Connecting...</div>
     <div class="video-container" id="videoContainer" style="display:none;">
         <video id="remoteVideo" autoplay playsinline></video>
@@ -65,7 +65,7 @@
     var email = "{{ email }}";
     var receiver = "{{ receiver }}";
     var receiver_name = "{{ receiver_name }}";
-    var room = [email, receiver].sort().join('');   
+    var room = [email, receiver].sort().join('');
     var localStream = null;
     var peerConnection = null;
     var isMuted = false;
@@ -100,7 +100,7 @@
     }
 
     async function initCall() {
-        document.getElementById('callStatus').textContent = 'Calling ' + receiver + '...';
+        document.getElementById('callStatus').textContent = 'Calling ' + receiver_name + '...';
         var ok = await startMedia(true);
         if (!ok) return;
 
@@ -119,7 +119,7 @@
 
         var offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
-        socket.emit('call_offer', { room: room, offer: offer, caller: username });
+        socket.emit('call_offer', { room: room, offer: offer, caller: email });
     }
 
     async function acceptCall() {
@@ -162,7 +162,7 @@
     }
 
     socket.on('call_offer', async function(data) {
-        if (data.caller === username) return;
+        if (data.caller === email) return;
         pendingOffer = data.offer;
         document.getElementById('callerName').textContent = data.caller;
         document.getElementById('incomingPopup').classList.add('show');
