@@ -2,35 +2,77 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from flask_socketio import SocketIO, emit, join_room
 import sqlite3
 import hashlib
+import os
+import psycopg2
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 app.secret_key = 'rasel_secret_key_2026'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+def get_db():
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        result = urlparse(DATABASE_URL)
+        conn = psycopg2.connect(
+            database=result.path[1:],
+            user=result.username,
+            password=result.password,
+            host=result.hostname,
+            port=result.port
+        )
+    else:
+        conn = sqlite3.connect('users.db')
+    return conn
+
 def init_db():
-    conn = sqlite3.connect('users.db')
+    conn = get_db()
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        name TEXT NOT NULL,
-        phone TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS contacts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        owner_email TEXT NOT NULL,
-        contact_email TEXT NOT NULL,
-        contact_name TEXT NOT NULL,
-        contact_phone TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender TEXT NOT NULL,
-        receiver TEXT NOT NULL,
-        message TEXT NOT NULL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )''')
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        c.execute('''CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            name TEXT NOT NULL,
+            phone TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS contacts (
+            id SERIAL PRIMARY KEY,
+            owner_email TEXT NOT NULL,
+            contact_email TEXT NOT NULL,
+            contact_name TEXT NOT NULL,
+            contact_phone TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS messages (
+            id SERIAL PRIMARY KEY,
+            sender TEXT NOT NULL,
+            receiver TEXT NOT NULL,
+            message TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+    else:
+        c.execute('''CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            name TEXT NOT NULL,
+            phone TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS contacts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_email TEXT NOT NULL,
+            contact_email TEXT NOT NULL,
+            contact_name TEXT NOT NULL,
+            contact_phone TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender TEXT NOT NULL,
+            receiver TEXT NOT NULL,
+            message TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )''')
     conn.commit()
     conn.close()
 
@@ -45,9 +87,9 @@ def home():
 def login():
     email = request.form['email']
     password = hash_password(request.form['password'])
-    conn = sqlite3.connect('users.db')
+    conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE email=? AND password=?', (email, password))
+    c.execute('SELECT * FROM users WHERE email=%s AND password=%s' if os.environ.get('DATABASE_URL') else 'SELECT * FROM users WHERE email=? AND password=?', (email, password))
     user = c.fetchone()
     conn.close()
     if user:
@@ -67,26 +109,28 @@ def signup_post():
     password = hash_password(request.form['password'])
     name = request.form['name']
     phone = request.form.get('phone', '')
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     try:
-        conn = sqlite3.connect('users.db')
+        conn = get_db()
         c = conn.cursor()
-        c.execute('INSERT INTO users (email, password, name, phone) VALUES (?, ?, ?, ?)',
+        c.execute(f'INSERT INTO users (email, password, name, phone) VALUES ({ph}, {ph}, {ph}, {ph})',
                   (email, password, name, phone))
         conn.commit()
         conn.close()
         return redirect(url_for('home'))
-    except sqlite3.IntegrityError:
+    except Exception:
         return render_template('signup.html', error="Email already exists!")
 
 @app.route('/dashboard')
 def dashboard():
     if 'email' not in session:
         return redirect(url_for('home'))
-    conn = sqlite3.connect('users.db')
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
     c = conn.cursor()
     c.execute('SELECT COUNT(*) FROM users')
     total_users = c.fetchone()[0]
-    c.execute('SELECT * FROM contacts WHERE owner_email=?', (session['email'],))
+    c.execute(f'SELECT * FROM contacts WHERE owner_email={ph}', (session['email'],))
     contacts = c.fetchall()
     conn.close()
     return render_template('dashboard.html',
@@ -100,9 +144,10 @@ def add_contact():
     if 'email' not in session:
         return redirect(url_for('home'))
     contact_email = request.form['contact_email']
-    conn = sqlite3.connect('users.db')
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT name, phone FROM users WHERE email=?', (contact_email,))
+    c.execute(f'SELECT name, phone FROM users WHERE email={ph}', (contact_email,))
     user = c.fetchone()
     if not user:
         conn.close()
@@ -112,13 +157,13 @@ def add_contact():
                                total_users=0,
                                contacts=[],
                                error="No user found with this email!")
-    c.execute('SELECT * FROM contacts WHERE owner_email=? AND contact_email=?',
+    c.execute(f'SELECT * FROM contacts WHERE owner_email={ph} AND contact_email={ph}',
               (session['email'], contact_email))
     exists = c.fetchone()
     if exists:
         conn.close()
         return redirect(url_for('dashboard'))
-    c.execute('INSERT INTO contacts (owner_email, contact_email, contact_name, contact_phone) VALUES (?, ?, ?, ?)',
+    c.execute(f'INSERT INTO contacts (owner_email, contact_email, contact_name, contact_phone) VALUES ({ph}, {ph}, {ph}, {ph})',
               (session['email'], contact_email, user[0], user[1]))
     conn.commit()
     conn.close()
@@ -128,9 +173,10 @@ def add_contact():
 def delete_contact(contact_id):
     if 'email' not in session:
         return redirect(url_for('home'))
-    conn = sqlite3.connect('users.db')
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
     c = conn.cursor()
-    c.execute('DELETE FROM contacts WHERE id=? AND owner_email=?', (contact_id, session['email']))
+    c.execute(f'DELETE FROM contacts WHERE id={ph} AND owner_email={ph}', (contact_id, session['email']))
     conn.commit()
     conn.close()
     return redirect(url_for('dashboard'))
@@ -139,9 +185,10 @@ def delete_contact(contact_id):
 def contacts():
     if 'email' not in session:
         return redirect(url_for('home'))
-    conn = sqlite3.connect('users.db')
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT * FROM contacts WHERE owner_email=?', (session['email'],))
+    c.execute(f'SELECT * FROM contacts WHERE owner_email={ph}', (session['email'],))
     contacts = c.fetchall()
     conn.close()
     return render_template('contacts.html',
@@ -159,9 +206,10 @@ def calllog():
 def messages():
     if 'email' not in session:
         return redirect(url_for('home'))
-    conn = sqlite3.connect('users.db')
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT * FROM contacts WHERE owner_email=?', (session['email'],))
+    c.execute(f'SELECT * FROM contacts WHERE owner_email={ph}', (session['email'],))
     contacts = c.fetchall()
     conn.close()
     return render_template('messages.html',
@@ -173,15 +221,16 @@ def messages():
 def chat(receiver_email):
     if 'email' not in session:
         return redirect(url_for('home'))
-    conn = sqlite3.connect('users.db')
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
     c = conn.cursor()
-    c.execute('''SELECT * FROM messages
-                 WHERE (sender=? AND receiver=?)
-                 OR (sender=? AND receiver=?)
+    c.execute(f'''SELECT * FROM messages
+                 WHERE (sender={ph} AND receiver={ph})
+                 OR (sender={ph} AND receiver={ph})
                  ORDER BY timestamp ASC''',
               (session['email'], receiver_email, receiver_email, session['email']))
     chats = c.fetchall()
-    c.execute('SELECT name FROM users WHERE email=?', (receiver_email,))
+    c.execute(f'SELECT name FROM users WHERE email={ph}', (receiver_email,))
     receiver = c.fetchone()
     receiver_name = receiver[0] if receiver else receiver_email
     conn.close()
@@ -199,9 +248,10 @@ def send_message_ajax():
     data = request.get_json()
     receiver = data['receiver']
     message = data['message']
-    conn = sqlite3.connect('users.db')
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
     c = conn.cursor()
-    c.execute('INSERT INTO messages (sender, receiver, message) VALUES (?, ?, ?)',
+    c.execute(f'INSERT INTO messages (sender, receiver, message) VALUES ({ph}, {ph}, {ph})',
               (session['email'], receiver, message))
     conn.commit()
     conn.close()
@@ -211,9 +261,10 @@ def send_message_ajax():
 def call(receiver_email):
     if 'email' not in session:
         return redirect(url_for('home'))
-    conn = sqlite3.connect('users.db')
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT name FROM users WHERE email=?', (receiver_email,))
+    c.execute(f'SELECT name FROM users WHERE email={ph}', (receiver_email,))
     receiver = c.fetchone()
     receiver_name = receiver[0] if receiver else receiver_email
     conn.close()
