@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EnglishPeer — Notifications</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+    <span class="logo">EnglishPeer</span>
+    <div class="nav-links">
+        <a href="/home">Home</a>
+        <a href="/home?role=Teacher">Teachers</a>
+        <a href="/friends">Friends</a>
+        <a href="/messages">Messages</a>
+        <a href="/notifications" style="color:white;font-weight:500;">Notification</a>
+    </div>
+    <div class="nav-avatar">{{ username[0]|upper }}</div>
+</nav>
+<div style="background:#f0f4ff;min-height:calc(100vh - 56px);padding:28px;">
+    <div class="section-card">
+        <div class="section-header">
+            <span class="section-title">Friend Requests</span>
+        </div>
+        {% if requests %}
+            {% for req in requests %}
+            <div class="contact-row">
+                <div class="contact-avatar" style="background:#dbeafe;color:#1d4ed8;">
+                    {{ req[1][0]|upper }}
+                </div>
+                <div class="contact-info">
+                    <div class="contact-name">{{ req[1] }}</div>
+                    <div class="contact-sub">{{ req[2] }} • {{ req[3] }}</div>
+                </div>
+                <a href="/accept_friend/{{ req[0] }}"
+                   style="padding:6px 14px;background:#d1fae5;color:#065f46;border-radius:6px;font-size:12px;text-decoration:none;margin-right:6px;">
+                   ✓ Accept
+                </a>
+                <a href="/decline_friend/{{ req[0] }}"
+                   style="padding:6px 14px;background:#fef2f2;color:#dc2626;border-radius:6px;font-size:12px;text-decoration:none;">
+                   ✕ Decline
+                </a>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:#94a3b8;font-size:14px;padding:16px 0;">No new notifications.</p>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>
