@@ -1,17 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Kotha</title>
+    <title>EnglishPeer — Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
 <nav class="navbar">
-    <span class="logo">ConnectApp-Researcher MRK</span>
+    <span class="logo">EnglishPeer</span>
     <div class="nav-links">
-        <a href="/dashboard">Home</a>
-        <a href="/sport">Sport</a>
+        <a href="/home">Home</a>
+        <a href="/discover?role=Teacher">Teachers</a>
+        <a href="/discover">Friends</a>
+        <a href="/messages">Messages</a>
+        <a href="/Notification">Notification</a>
         <div class="nav-avatar">{{ username[0]|upper }}</div>
+        
     </div>
 </nav>
 
@@ -24,16 +28,16 @@
             <div class="user-status">&#11044; Online</div>
         </div>
         <a href="/dashboard" class="menu-item active">
-            <span class="menu-icon">&#9632;</span> Home
+            <span class="menu-icon">&#9632;</span> Dashboard
         </a>
         <a href="/contacts" class="menu-item">
-            <span class="menu-icon">&#9742;</span> Contacts
-        </a>
-        <a href="/calllog" class="menu-item">
-            <span class="menu-icon">&#9743;</span> Call Log rasel
+            <span class="menu-icon">&#9742;</span> My Contacts
         </a>
         <a href="/messages" class="menu-item">
             <span class="menu-icon">&#9993;</span> Messages
+        </a>
+        <a href="/calllog" class="menu-item">
+            <span class="menu-icon">&#9743;</span> Call Log
         </a>
         <a href="/settings" class="menu-item">
             <span class="menu-icon">&#9881;</span> Settings
@@ -42,7 +46,7 @@
     </div>
 
     <div class="main-content">
-        <div class="page-title">Welcome, {{ username }}!</div>
+        <div class="page-title">Welcome, {{ username }}! 👋</div>
 
         <div class="stat-grid">
             <div class="stat-card">
@@ -65,7 +69,7 @@
 
         <div class="section-card" style="margin-bottom:20px;">
             <div class="section-header">
-                <span class="section-title">Add New Contact</span>
+                <span class="section-title">Add Contact by Email</span>
             </div>
             {% if error %}
             <div class="error-msg">{{ error }}</div>
@@ -119,7 +123,7 @@
                 {% endfor %}
             {% else %}
                 <p style="color:#94a3b8;font-size:14px;padding:16px 0;">
-                    No contacts yet. Add contact by email above!
+                    No contacts yet. Add contact by email above or <a href="/discover" style="color:#2563eb;">Find Friends</a>!
                 </p>
             {% endif %}
         </div>
@@ -132,5 +136,19 @@ function toggleDetail(id) {
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<script>
+    var email = "{{ email }}";
+    var socket = io();
+    socket.emit('join_personal', { username: email });
+
+    socket.on('incoming_call_notify', function(data) {
+        if (confirm(data.caller + ' is calling you! Accept?')) {
+            window.location.href = '/call/' + data.caller;
+        }
+    });
+</script>
+
 </body>
 </html>
