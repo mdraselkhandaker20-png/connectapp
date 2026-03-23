@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EnglishPeer — Friends</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .feed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;padding:28px;}
+        .user-card{background:white;border-radius:12px;border:0.5px solid #e2e8f0;padding:20px;text-align:center;}
+        .user-card-avatar{width:72px;height:72px;border-radius:50%;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;margin:0 auto 12px;border:3px solid #bfdbfe;}
+        .user-card-name{font-size:15px;font-weight:600;color:#1e293b;margin-bottom:4px;}
+        .user-card-country{font-size:12px;color:#64748b;margin-bottom:14px;}
+        .user-card-btns{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+        .btn-sm{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;border:none;cursor:pointer;text-decoration:none;display:inline-block;}
+        .btn-audio{background:#d1fae5;color:#065f46;}
+        .btn-video{background:#ede9fe;color:#6d28d9;}
+        .btn-msg{background:#dbeafe;color:#1d4ed8;}
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <span class="logo">EnglishPeer</span>
+    <div class="nav-links">
+        <a href="/home">Home</a>
+        <a href="/home?role=Teacher">Teachers</a>
+        <a href="/friends" style="color:white;font-weight:500;">Friends</a>
+        <a href="/messages">Messages</a>
+        <a href="/notifications">Notification</a>
+    </div>
+    <div class="nav-avatar">{{ username[0]|upper }}</div>
+</nav>
+
+<div class="dashboard-wrapper">
+    <div class="sidebar">
+        <div class="user-info">
+            <div class="user-avatar">{{ username[0]|upper }}</div>
+            <div class="user-name">{{ username }}</div>
+            <div class="user-status">&#11044; Online</div>
+        </div>
+        <a href="/dashboard" class="menu-item active">
+            <span class="menu-icon">&#9632;</span> Dashboard
+        </a>
+        <a href="/contacts" class="menu-item">
+            <span class="menu-icon">&#9742;</span> My Contacts
+        </a>
+        <a href="/messages" class="menu-item">
+            <span class="menu-icon">&#9993;</span> Messages
+        </a>
+        <a href="/calllog" class="menu-item">
+            <span class="menu-icon">&#9743;</span> Call Log
+        </a>
+        <a href="/settings" class="menu-item">
+            <span class="menu-icon">&#9881;</span> Settings
+        </a>
+        <a href="/logout" class="logout-btn">&#10148; Logout</a>
+    </div>
+
+<div style="background:#f0f4ff;min-height:calc(100vh - 56px);">
+    <div class="feed-grid">
+        {% if friends %}
+            {% for friend in friends %}
+            <div class="user-card">
+                <div class="user-card-avatar">{{ friend[1][0]|upper }}</div>
+                <div class="user-card-name">{{ friend[1] }}</div>
+                <div class="user-card-country">{{ friend[2] }} • {{ friend[3] }}</div>
+                <div class="user-card-btns">
+                    <a href="/call/{{ friend[0] }}" class="btn-sm btn-audio">&#9990; Audio</a>
+                    <a href="/call/{{ friend[0] }}" class="btn-sm btn-video">&#9641; Video</a>
+                    <a href="/chat/{{ friend[0] }}" class="btn-sm btn-msg">&#9993; Msg</a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:#94a3b8;padding:20px;">No friends yet. <a href="/home" style="color:#2563eb;">Find Friends</a>!</p>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>
