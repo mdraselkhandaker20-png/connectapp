@@ -121,6 +121,8 @@ def login():
     if user:
         session['email'] = user[1]
         session['name'] = user[3]
+        session['country'] = user[6]
+        session['role'] = user[8]
         return redirect(url_for('dashboard'))
     else:
         return render_template('index.html', error="Invalid email or password!")

@@ -28,7 +28,12 @@
         <div class="user-info">
             <div class="user-avatar">{{ username[0]|upper }}</div>
             <div class="user-name">{{ username }}</div>
-            <div class="user-status">&#11044; Online</div>
+            <div style="font-size:11px;color:#93c5fd;margin-top:2px;">{{ email }}</div>
+            <div style="font-size:11px;color:#93c5fd;margin-top:2px;">{{ session.country }}</div>
+            <div style="margin-top:4px;">
+                <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:11px;">{{ session.role }}</span>
+            </div>
+            <div class="user-status" style="margin-top:6px;">&#11044; Online</div>
         </div>
         <a href="/dashboard" class="menu-item active">
             <span class="menu-icon">&#9632;</span> Dashboard
