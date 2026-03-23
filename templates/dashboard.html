@@ -14,8 +14,7 @@
         <a href="/discover">Friends</a>
         <a href="/messages">Messages</a>
         <a href="/Notification">Notification</a>
-        <div class="nav-avatar">{{ username[0]|upper }}</div>
-        
+                
     </div>
 </nav>
 
@@ -45,88 +44,34 @@
         <a href="/logout" class="logout-btn">&#10148; Logout</a>
     </div>
 
-    <div class="main-content">
-        <div class="page-title">Welcome, {{ username }}! 👋</div>
+    <div class="main-content" style="padding:20px;overflow-y:auto;">
 
-        <div class="stat-grid">
-            <div class="stat-card">
-                <div class="stat-num">{{ total_users }}</div>
-                <div class="stat-label">Total Users</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num">{{ contacts|length }}</div>
-                <div class="stat-label">My Contacts</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num">0</div>
-                <div class="stat-label">Recent Calls</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num">0</div>
-                <div class="stat-label">Missed Calls</div>
-            </div>
-        </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+        {% for user in users %}
+<div style="background:white;border-radius:12px;border:0.5px solid #e2e8f0;padding:16px;text-align:center;">
+    <div style="width:64px;height:80px;border-radius:8px;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;margin:0 auto 10px;">
+        {{ user[1][0]|upper }}
+    </div>
+    <div style="font-size:14px;font-weight:600;color:#1e293b;margin-bottom:2px;">{{ user[1] }}</div>
+    <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">{{ user[2] }}</div>
+    <div style="font-size:11px;color:#1d4ed8;margin-bottom:10px;">{{ user[3] }}</div>
+    <div style="display:flex;gap:6px;justify-content:center;">
+        <a href="/chat/{{ user[0] }}" style="padding:5px 10px;background:#dbeafe;color:#1d4ed8;border-radius:6px;font-size:11px;text-decoration:none;">&#9993;</a>
+        <a href="/call/{{ user[0] }}" style="padding:5px 10px;background:#d1fae5;color:#065f46;border-radius:6px;font-size:11px;text-decoration:none;">&#9990;</a>
+        <a href="/call/{{ user[0] }}" style="padding:5px 10px;background:#ede9fe;color:#6d28d9;border-radius:6px;font-size:11px;text-decoration:none;">&#9641;</a>
+        <a href="/add_friend/{{ user[0] }}" style="padding:5px 10px;background:#1d4ed8;color:white;border-radius:6px;font-size:11px;text-decoration:none;">+</a>
+    </div>
+</div>
+{% endfor %}
 
-        <div class="section-card" style="margin-bottom:20px;">
-            <div class="section-header">
-                <span class="section-title">Add Contact by Email</span>
-            </div>
-            {% if error %}
-            <div class="error-msg">{{ error }}</div>
-            {% endif %}
-            <form method="POST" action="/add_contact" style="display:flex;gap:12px;flex-wrap:wrap;">
-                <input type="email" name="contact_email" placeholder="Enter contact's email address" required
-                       style="flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;">
-                <button type="submit"
-                        style="padding:9px 20px;background:#1d4ed8;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;">
-                    + Add
-                </button>
-            </form>
-        </div>
+{% if not users %}
+<div style="grid-column:1/-1;text-align:center;padding:40px;color:#94a3b8;">
+    No users yet!
+</div>
+{% endif %}
+    </div>
 
-        <div class="section-card">
-            <div class="section-header">
-                <span class="section-title">My Contacts ({{ contacts|length }})</span>
-            </div>
-
-            {% if contacts %}
-                {% for contact in contacts %}
-                <div class="contact-row" onclick="toggleDetail('detail-{{ contact[0] }}')" style="cursor:pointer;">
-                    <div class="contact-avatar" style="background:#dbeafe;color:#1d4ed8;">
-                        {{ contact[3][0]|upper }}
-                    </div>
-                    <div class="contact-info">
-                        <div class="contact-name">{{ contact[3] }}</div>
-                        <div class="contact-sub">{{ contact[2] }}</div>
-                    </div>
-                    <div class="online-dot"></div>
-                    <a href="/chat/{{ contact[2] }}" onclick="event.stopPropagation()"
-                       style="padding:6px 14px;background:#f0fdf4;color:#16a34a;border-radius:6px;font-size:12px;text-decoration:none;margin-right:4px;">
-                       &#9993; Message</a>
-                    <a href="/call/{{ contact[2] }}" onclick="event.stopPropagation()"
-                       class="btn-call" style="text-decoration:none;">&#9990; Call</a>
-                    <a href="/call/{{ contact[2] }}?video=true" onclick="event.stopPropagation()"
-                       class="btn-video" style="text-decoration:none;">&#9641; Video</a>
-                </div>
-                <div id="detail-{{ contact[0] }}" style="display:none;background:#f8fafc;border:0.5px solid #e2e8f0;border-radius:8px;padding:16px;margin:4px 0 8px 50px;">
-                    <p style="font-size:14px;font-weight:600;color:#1e293b;margin-bottom:4px;">{{ contact[3] }}</p>
-                    <p style="font-size:13px;color:#64748b;margin-bottom:4px;">&#9993; {{ contact[2] }}</p>
-                    {% if contact[4] %}
-                    <p style="font-size:13px;color:#64748b;margin-bottom:12px;">&#9990; {{ contact[4] }}</p>
-                    {% endif %}
-                    <a href="/delete_contact/{{ contact[0] }}"
-                       onclick="return confirm('Delete this contact?')"
-                       style="padding:6px 14px;background:#fef2f2;color:#dc2626;border-radius:6px;font-size:12px;text-decoration:none;">
-                       &#10005; Delete Contact
-                    </a>
-                </div>
-                {% endfor %}
-            {% else %}
-                <p style="color:#94a3b8;font-size:14px;padding:16px 0;">
-                    No contacts yet. Add contact by email above or <a href="/discover" style="color:#2563eb;">Find Friends</a>!
-                </p>
-            {% endif %}
-        </div>
+</div>
     </div>
 </div>
 

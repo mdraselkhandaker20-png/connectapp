@@ -161,14 +161,15 @@ def dashboard():
     c = conn.cursor()
     c.execute('SELECT COUNT(*) FROM users')
     total_users = c.fetchone()[0]
-    c.execute(f'SELECT * FROM contacts WHERE owner_email={ph}', (session['email'],))
-    contacts = c.fetchall()
+    c.execute(f'''SELECT email, name, country, role, gender, education 
+                 FROM users WHERE email != {ph}''', (session['email'],))
+    users = c.fetchall()
     conn.close()
     return render_template('dashboard.html',
                            username=session['name'],
                            email=session['email'],
                            total_users=total_users,
-                           contacts=contacts)
+                           users=users)
 
 @app.route('/add_contact', methods=['POST'])
 def add_contact():
