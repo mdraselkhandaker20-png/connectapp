@@ -13,11 +13,15 @@
         <a href="/discover?role=Teacher">Teachers</a>
         <a href="/discover">Friends</a>
         <a href="/messages">Messages</a>
-        <a href="/Notification">Notification</a>
-                
+        <a href="/notifications" style="position:relative;">
+    Notification
+    {% if notif_count is defined and notif_count > 0 %}
+    <span style="background:#ef4444;color:white;border-radius:50%;padding:1px 6px;font-size:11px;position:absolute;top:-8px;right:-10px;">{{ notif_count }}</span>
+    {% endif %}
+</a>
     </div>
+    <div class="nav-avatar">{{ username[0]|upper }}</div>
 </nav>
-
 <div class="dashboard-wrapper">
 
     <div class="sidebar">

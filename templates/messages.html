@@ -24,7 +24,12 @@
         <a href="/messages" style="color:white;font-weight:500;">
             Messages {% if total_unread > 0 %}<span style="background:#ef4444;color:white;border-radius:50%;padding:1px 6px;font-size:11px;">{{ total_unread }}</span>{% endif %}
         </a>
-        <a href="/notifications">Notification</a>
+        <a href="/notifications" style="position:relative;">
+    Notification
+    {% if notif_count is defined and notif_count > 0 %}
+    <span style="background:#ef4444;color:white;border-radius:50%;padding:1px 6px;font-size:11px;position:absolute;top:-8px;right:-10px;">{{ notif_count }}</span>
+    {% endif %}
+</a>
     </div>
     <div class="nav-avatar">{{ username[0]|upper }}</div>
 </nav>
@@ -50,5 +55,19 @@
         {% endif %}
     </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<script>
+    var email = "{{ email }}";
+    var socket = io();
+    socket.emit('join_personal', { username: email });
+
+    socket.on('incoming_call_notify', function(data) {
+        if (confirm(data.caller + ' is calling you! Accept?')) {
+            window.location.href = '/call/' + data.caller;
+        }
+    });
+</script>
+
 </body>
 </html>

@@ -169,7 +169,8 @@ def dashboard():
                            username=session['name'],
                            email=session['email'],
                            total_users=total_users,
-                           users=users)
+                           users=users,
+                         notif_count=get_notif_count())
 
 @app.route('/add_contact', methods=['POST'])
 def add_contact():
@@ -223,10 +224,12 @@ def contacts():
     c.execute(f'SELECT * FROM contacts WHERE owner_email={ph}', (session['email'],))
     contacts = c.fetchall()
     conn.close()
-    return render_template('contacts.html',
+    return render_template('dashboard.html',
                            username=session['name'],
                            email=session['email'],
-                           contacts=contacts)
+                           total_users=total_users,
+                           users=users,
+                           notif_count=get_notif_count())
 
 @app.route('/calllog')
 def calllog():
@@ -316,11 +319,12 @@ def call(receiver_email):
     receiver = c.fetchone()
     receiver_name = receiver[0] if receiver else receiver_email
     conn.close()
-    return render_template('call.html',
+    return render_template('dashboard.html',
                            username=session['name'],
                            email=session['email'],
-                           receiver=receiver_email,
-                           receiver_name=receiver_name)
+                           total_users=total_users,
+                           users=users,
+                           notif_count=get_notif_count())
 
 @app.route('/settings')
 def settings():
@@ -353,6 +357,8 @@ def home_feed():
     role_filter = request.args.get('role', '')
     conn = get_db()
     c = conn.cursor()
+    c.execute('SELECT COUNT(*) FROM users')
+    total_users = c.fetchone()[0]
     if role_filter:
         c.execute(f'''SELECT email, name, country, role, gender, education 
                      FROM users WHERE email != {ph} AND role={ph}''',
@@ -367,7 +373,9 @@ def home_feed():
                            username=session['name'],
                            email=session['email'],
                            users=users,
-                           role_filter=role_filter)
+                           total_users=total_users,
+                           role_filter=role_filter,
+                           notif_count=get_notif_count())
 
 @app.route('/add_friend/<receiver_email>')
 def add_friend(receiver_email):
@@ -411,15 +419,12 @@ def notifications():
                  WHERE f.receiver={ph} AND f.status='pending' ''',
               (session['email'],))
     requests = c.fetchall()
-    c.execute(f"SELECT COUNT(*) FROM friends WHERE receiver={ph} AND status='pending'",
-              (session['email'],))
-    notif_count = c.fetchone()[0]
     conn.close()
     return render_template('notifications.html',
                            username=session['name'],
                            email=session['email'],
                            requests=requests,
-                           notif_count=notif_count)
+                           notif_count=get_notif_count())
 
 @app.route('/friends')
 def friends():
@@ -440,7 +445,8 @@ def friends():
     return render_template('friends.html',
                            username=session['name'],
                            email=session['email'],
-                           friends=friends)
+                           friends=friends,
+                           notif_count=get_notif_count())
 
 @app.route('/decline_friend/<sender_email>')
 def decline_friend(sender_email):
@@ -454,6 +460,18 @@ def decline_friend(sender_email):
     conn.commit()
     conn.close()
     return redirect(url_for('notifications'))
+
+def get_notif_count():
+    if 'email' not in session:
+        return 0
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(f"SELECT COUNT(*) FROM friends WHERE receiver={ph} AND status='pending'",
+              (session['email'],))
+    count = c.fetchone()[0]
+    conn.close()
+    return count
 
 @socketio.on('join_call')
 def on_join_call(data):

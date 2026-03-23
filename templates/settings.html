@@ -55,5 +55,19 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<script>
+    var email = "{{ email }}";
+    var socket = io();
+    socket.emit('join_personal', { username: email });
+
+    socket.on('incoming_call_notify', function(data) {
+        if (confirm(data.caller + ' is calling you! Accept?')) {
+            window.location.href = '/call/' + data.caller;
+        }
+    });
+</script>
+
 </body>
 </html>
