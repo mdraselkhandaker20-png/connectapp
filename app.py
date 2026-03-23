@@ -433,7 +433,7 @@ def friends():
     ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     conn = get_db()
     c = conn.cursor()
-    c.execute(f'''SELECT u.email, u.name, u.country, u.role 
+    c.execute(f'''SELECT DISTINCT u.email, u.name, u.country, u.role 
                  FROM friends f JOIN users u ON 
                  (f.sender=u.email OR f.receiver=u.email)
                  WHERE (f.sender={ph} OR f.receiver={ph})
