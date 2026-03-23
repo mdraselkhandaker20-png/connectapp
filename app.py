@@ -35,7 +35,13 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             name TEXT NOT NULL,
-            phone TEXT
+            phone TEXT,
+            gender TEXT,
+            country TEXT,
+            education TEXT,
+            role TEXT,
+            profile_pic TEXT DEFAULT 'default.png',
+            bio TEXT
         )''')
         c.execute('''CREATE TABLE IF NOT EXISTS contacts (
             id SERIAL PRIMARY KEY,
@@ -49,7 +55,14 @@ def init_db():
             sender TEXT NOT NULL,
             receiver TEXT NOT NULL,
             message TEXT NOT NULL,
+            is_read INTEGER DEFAULT 0,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS friends (
+            id SERIAL PRIMARY KEY,
+            sender TEXT NOT NULL,
+            receiver TEXT NOT NULL,
+            status TEXT DEFAULT 'pending'
         )''')
     else:
         c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -57,7 +70,13 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             name TEXT NOT NULL,
-            phone TEXT
+            phone TEXT,
+            gender TEXT,
+            country TEXT,
+            education TEXT,
+            role TEXT,
+            profile_pic TEXT DEFAULT 'default.png',
+            bio TEXT
         )''')
         c.execute('''CREATE TABLE IF NOT EXISTS contacts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +90,14 @@ def init_db():
             sender TEXT NOT NULL,
             receiver TEXT NOT NULL,
             message TEXT NOT NULL,
+            is_read INTEGER DEFAULT 0,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS friends (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender TEXT NOT NULL,
+            receiver TEXT NOT NULL,
+            status TEXT DEFAULT 'pending'
         )''')
     conn.commit()
     conn.close()
@@ -108,13 +134,18 @@ def signup_post():
     email = request.form['email']
     password = hash_password(request.form['password'])
     name = request.form['name']
-    phone = request.form.get('phone', '')
+    gender = request.form.get('gender', '')
+    country = request.form.get('country', '')
+    education = request.form.get('education', '')
+    role = request.form.get('role', '')
     ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     try:
         conn = get_db()
         c = conn.cursor()
-        c.execute(f'INSERT INTO users (email, password, name, phone) VALUES ({ph}, {ph}, {ph}, {ph})',
-                  (email, password, name, phone))
+        c.execute(f'''INSERT INTO users 
+            (email, password, name, gender, country, education, role) 
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})''',
+                  (email, password, name, gender, country, education, role))
         conn.commit()
         conn.close()
         return redirect(url_for('home'))
@@ -163,8 +194,8 @@ def add_contact():
     if exists:
         conn.close()
         return redirect(url_for('dashboard'))
-    c.execute(f'INSERT INTO contacts (owner_email, contact_email, contact_name, contact_phone) VALUES ({ph}, {ph}, {ph}, {ph})',
-              (session['email'], contact_email, user[0], user[1]))
+    c.execute(f'INSERT INTO contacts (owner_email, contact_email, contact_name, contact_phone) VALUES ({ph},{ph},{ph},{ph})',
+              (session['email'], contact_email, user[0], user[1] or ''))
     conn.commit()
     conn.close()
     return redirect(url_for('dashboard'))
@@ -209,13 +240,26 @@ def messages():
     ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     conn = get_db()
     c = conn.cursor()
-    c.execute(f'SELECT * FROM contacts WHERE owner_email={ph}', (session['email'],))
-    contacts = c.fetchall()
+    c.execute(f'''SELECT u.email, u.name, u.country,
+                 COUNT(CASE WHEN m.receiver={ph} AND m.is_read=0 THEN 1 END) as unread,
+                 MAX(m.message) as last_msg
+                 FROM contacts ct
+                 JOIN users u ON ct.contact_email=u.email
+                 LEFT JOIN messages m ON (m.sender=u.email AND m.receiver={ph})
+                 WHERE ct.owner_email={ph}
+                 GROUP BY u.email, u.name, u.country
+                 ORDER BY MAX(m.timestamp) DESC''',
+              (session['email'], session['email'], session['email']))
+    convos = c.fetchall()
+    c.execute(f'SELECT COUNT(*) FROM messages WHERE receiver={ph} AND is_read=0',
+              (session['email'],))
+    total_unread = c.fetchone()[0]
     conn.close()
     return render_template('messages.html',
                            username=session['name'],
                            email=session['email'],
-                           contacts=contacts)
+                           convos=convos,
+                           total_unread=total_unread)
 
 @app.route('/chat/<receiver_email>')
 def chat(receiver_email):
@@ -230,6 +274,9 @@ def chat(receiver_email):
                  ORDER BY timestamp ASC''',
               (session['email'], receiver_email, receiver_email, session['email']))
     chats = c.fetchall()
+    c.execute(f"UPDATE messages SET is_read=1 WHERE sender={ph} AND receiver={ph}",
+              (receiver_email, session['email']))
+    conn.commit()
     c.execute(f'SELECT name FROM users WHERE email={ph}', (receiver_email,))
     receiver = c.fetchone()
     receiver_name = receiver[0] if receiver else receiver_email
@@ -251,7 +298,7 @@ def send_message_ajax():
     ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     conn = get_db()
     c = conn.cursor()
-    c.execute(f'INSERT INTO messages (sender, receiver, message) VALUES ({ph}, {ph}, {ph})',
+    c.execute(f'INSERT INTO messages (sender, receiver, message) VALUES ({ph},{ph},{ph})',
               (session['email'], receiver, message))
     conn.commit()
     conn.close()
@@ -286,10 +333,126 @@ def settings():
 def sport():
     return render_template('sport.html')
 
+@app.route('/discover')
+def discover():
+    if 'email' not in session:
+        return redirect(url_for('home'))
+    return redirect(url_for('home_feed'))
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('home'))
+
+@app.route('/home')
+def home_feed():
+    if 'email' not in session:
+        return redirect(url_for('home'))
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    role_filter = request.args.get('role', '')
+    conn = get_db()
+    c = conn.cursor()
+    if role_filter:
+        c.execute(f'''SELECT email, name, country, role, gender, education 
+                     FROM users WHERE email != {ph} AND role={ph}''',
+                  (session['email'], role_filter))
+    else:
+        c.execute(f'''SELECT email, name, country, role, gender, education 
+                     FROM users WHERE email != {ph}''',
+                  (session['email'],))
+    users = c.fetchall()
+    conn.close()
+    return render_template('home_feed.html',
+                           username=session['name'],
+                           email=session['email'],
+                           users=users,
+                           role_filter=role_filter)
+
+@app.route('/add_friend/<receiver_email>')
+def add_friend(receiver_email):
+    if 'email' not in session:
+        return redirect(url_for('home'))
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(f'SELECT * FROM friends WHERE sender={ph} AND receiver={ph}',
+              (session['email'], receiver_email))
+    exists = c.fetchone()
+    if not exists:
+        c.execute(f'INSERT INTO friends (sender, receiver) VALUES ({ph},{ph})',
+                  (session['email'], receiver_email))
+        conn.commit()
+    conn.close()
+    return redirect(url_for('home_feed'))
+
+@app.route('/accept_friend/<sender_email>')
+def accept_friend(sender_email):
+    if 'email' not in session:
+        return redirect(url_for('home'))
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(f"UPDATE friends SET status='accepted' WHERE sender={ph} AND receiver={ph}",
+              (sender_email, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('notifications'))
+
+@app.route('/notifications')
+def notifications():
+    if 'email' not in session:
+        return redirect(url_for('home'))
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(f'''SELECT f.sender, u.name, u.country, u.role 
+                 FROM friends f JOIN users u ON f.sender=u.email
+                 WHERE f.receiver={ph} AND f.status='pending' ''',
+              (session['email'],))
+    requests = c.fetchall()
+    c.execute(f"SELECT COUNT(*) FROM friends WHERE receiver={ph} AND status='pending'",
+              (session['email'],))
+    notif_count = c.fetchone()[0]
+    conn.close()
+    return render_template('notifications.html',
+                           username=session['name'],
+                           email=session['email'],
+                           requests=requests,
+                           notif_count=notif_count)
+
+@app.route('/friends')
+def friends():
+    if 'email' not in session:
+        return redirect(url_for('home'))
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(f'''SELECT u.email, u.name, u.country, u.role 
+                 FROM friends f JOIN users u ON 
+                 (f.sender=u.email OR f.receiver=u.email)
+                 WHERE (f.sender={ph} OR f.receiver={ph})
+                 AND f.status='accepted'
+                 AND u.email != {ph}''',
+              (session['email'], session['email'], session['email']))
+    friends = c.fetchall()
+    conn.close()
+    return render_template('friends.html',
+                           username=session['name'],
+                           email=session['email'],
+                           friends=friends)
+
+@app.route('/decline_friend/<sender_email>')
+def decline_friend(sender_email):
+    if 'email' not in session:
+        return redirect(url_for('home'))
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(f"DELETE FROM friends WHERE sender={ph} AND receiver={ph}",
+              (sender_email, session['email']))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('notifications'))
 
 @socketio.on('join_call')
 def on_join_call(data):
