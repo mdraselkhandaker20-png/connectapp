@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EnglishPeer — Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+    <span class="logo">EnglishPeer</span>
+    <div class="nav-links">
+        <a href="/home">home</a>
+        <a href="/home?role=Teacher">Teachers</a>
+        <a href="/friends">Friends</a>
+        <a href="/messages">Messages</a>
+        <a href="/notifications">Notification</a>
+    </div>
+    <div class="nav-avatar">{{ username[0]|upper }}</div>
+</nav>
+
+<div style="padding:28px;">
+    <h2>Welcome, {{ username }}!</h2>
+    <p>Total users: {{ users|length }}</p>
+</div>
+
+</body>
+</html>
