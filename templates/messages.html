@@ -1,68 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ConnectApp — Messages</title>
+    <title>EnglishPeer — Messages</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .convo-list{padding:20px 28px;}
+        .convo-row{display:flex;align-items:center;gap:14px;padding:14px;background:white;border-radius:10px;border:0.5px solid #e2e8f0;margin-bottom:10px;cursor:pointer;text-decoration:none;}
+        .convo-row:hover{background:#f0f4ff;}
+        .convo-avatar{width:46px;height:46px;border-radius:50%;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;flex-shrink:0;}
+        .convo-info{flex:1;}
+        .convo-name{font-size:15px;font-weight:600;color:#1e293b;}
+        .convo-last{font-size:13px;color:#94a3b8;margin-top:2px;}
+        .unread-badge{background:#1d4ed8;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;flex-shrink:0;}
+    </style>
 </head>
 <body>
 <nav class="navbar">
-    <span class="logo">ConnectApp</span>
+    <span class="logo">EnglishPeer</span>
     <div class="nav-links">
-        <a href="/dashboard">Home</a>
-        <div class="nav-avatar">{{ username[0]|upper }}</div>
+        <a href="/home">Home</a>
+        <a href="/home?role=Teacher">Teachers</a>
+        <a href="/friends">Friends</a>
+        <a href="/messages" style="color:white;font-weight:500;">
+            Messages {% if total_unread > 0 %}<span style="background:#ef4444;color:white;border-radius:50%;padding:1px 6px;font-size:11px;">{{ total_unread }}</span>{% endif %}
+        </a>
+        <a href="/notifications">Notification</a>
     </div>
+    <div class="nav-avatar">{{ username[0]|upper }}</div>
 </nav>
-<div class="dashboard-wrapper">
-    <div class="sidebar">
-        <div class="user-info">
-            <div class="user-avatar">{{ username[0]|upper }}</div>
-            <div class="user-name">{{ username }}</div>
-            <div class="user-status">&#11044; Online</div>
-        </div>
-        <a href="/dashboard" class="menu-item">
-            <span class="menu-icon">&#9632;</span> Home
-        </a>
-        <a href="/contacts" class="menu-item">
-            <span class="menu-icon">&#9742;</span> Contacts
-        </a>
-        <a href="/calllog" class="menu-item">
-            <span class="menu-icon">&#9743;</span> Call Log
-        </a>
-        <a href="/messages" class="menu-item active">
-            <span class="menu-icon">&#9993;</span> Messages
-        </a>
-        <a href="/settings" class="menu-item">
-            <span class="menu-icon">&#9881;</span> Settings
-        </a>
-        <a href="/logout" class="logout-btn">&#10148; Logout</a>
-    </div>
-    <div class="main-content">
-        <div class="page-title">Messages</div>
-        <div class="section-card">
-            <div class="section-header">
-                <span class="section-title">Your Contacts</span>
-            </div>
-            {% if contacts %}
-                {% for contact in contacts %}
-                <a href="/chat/{{ contact[2] }}" style="text-decoration:none;">
-                    <div class="contact-row" style="cursor:pointer;">
-                        <div class="contact-avatar" style="background:#dbeafe;color:#1d4ed8;">
-                            {{ contact[2][0]|upper }}
-                        </div>
-                        <div class="contact-info">
-                            <div class="contact-name">{{ contact[2] }}</div>
-                            <div class="contact-sub">Click to open chat</div>
-                        </div>
-                        <span style="font-size:18px;color:#1d4ed8;">&#9993;</span>
-                    </div>
-                </a>
-                {% endfor %}
-            {% else %}
-                <p style="color:#94a3b8;font-size:14px;padding:16px 0;">
-                    No contacts yet. <a href="/contacts" style="color:#2563eb;">Add contacts</a> to start messaging.
-                </p>
-            {% endif %}
-        </div>
+
+<div style="background:#f0f4ff;min-height:calc(100vh - 56px);">
+    <div class="convo-list">
+        <h2 style="font-size:18px;font-weight:600;color:#1e293b;margin-bottom:16px;">Messages</h2>
+        {% if convos %}
+            {% for convo in convos %}
+            <a href="/chat/{{ convo[0] }}" class="convo-row">
+                <div class="convo-avatar">{{ convo[1][0]|upper }}</div>
+                <div class="convo-info">
+                    <div class="convo-name">{{ convo[1] }}</div>
+                    <div class="convo-last">{{ convo[4] or 'Start a conversation...' }}</div>
+                </div>
+                {% if convo[3] > 0 %}
+                <div class="unread-badge">{{ convo[3] }}</div>
+                {% endif %}
+            </a>
+            {% endfor %}
+        {% else %}
+            <p style="color:#94a3b8;font-size:14px;">No conversations yet. <a href="/home" style="color:#2563eb;">Find Friends</a>!</p>
+        {% endif %}
     </div>
 </div>
 </body>
